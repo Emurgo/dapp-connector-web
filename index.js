@@ -2,7 +2,7 @@ import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser"
 import axios from "axios"
 import { textPartFromWalletChecksumImagePart } from "@emurgo/cip4-js"
 import { createIcon } from "@download/blockies"
-import { getTtl } from './utils'
+import { getTtl, utxoJSONToTransactionInput } from './utils'
 import { bytesToHex, hexToBytes } from './coreUtils';
 
 const cardanoAccessBtnRow = document.querySelector('#request-button-row')
@@ -28,8 +28,11 @@ const spinner = document.querySelector('#spinner')
 
 // NFT Buttons
 const mintNFT = document.querySelector("#mint-NFT")
-const findAssets = document.querySelector("#find-assets")
 const getAssetsMetadata = document.querySelector("#get-assets-metadata")
+
+// Plutus Buttons
+const signSendToDatumEqualsRedeemerTx = document.querySelector('#sign-send-to-datum-equals-redeemer-tx')
+const signSpendDatumEqualsRedeemerTx = document.querySelector('#sign-spend-datum-equals-redeemer-tx')
 
 const Bech32Prefix = Object.freeze({
   ADDRESS: 'addr',
@@ -40,7 +43,7 @@ let accessGranted = false
 let cardanoApi
 let returnType = 'cbor'
 let utxos
-let assets
+let accountBalance
 let usedAddresses
 let unusedAddresses
 let changeAddress
@@ -202,6 +205,7 @@ getAccountBalance.addEventListener('click', () => {
           return res;
         }, {});
       }
+      accountBalance = balanceJson
       alertSuccess(`Account Balance: ${JSON.stringify(balanceJson, null, 2)}`)
     });
   }
@@ -361,7 +365,15 @@ window._getUtxos = function (value) {
 }
 
 getUtxos.addEventListener('click', () => {
-  window._getUtxos();
+  const payload = document.querySelector('#get-utxos-payload').value;
+  if (payload == "" || isNaN(payload)) {
+    window._getUtxos();
+  } else {
+    const value = {
+      "amount": payload
+    }
+    window._getUtxos(value)
+  }
 })
 
 submitTx.addEventListener('click', () => {
@@ -837,58 +849,321 @@ mintNFT.addEventListener('click', () => {
   })
 })
 
-findAssets.addEventListener('click', () => {
-  toggleSpinner('show')
-  if (!accessGranted) {
-    alertError('Should request access first');
-    return;
-  }
-
-  if (!utxos) {
-    alertError('Should request utxos first');
-    return
-  }
-
-  let foundAssets = []
-
-  for (let i = 0; i < utxos.length; i++) {
-    for (let j = 0; j < utxos[i].assets.length; j++) {
-      foundAssets.push(utxos[i].assets[j]);
-    }
-  }
-
-  assets = foundAssets
-  toggleSpinner('hide')
-  if (foundAssets.length === 0) {
-    alertWarrning("No Assets found")
-  } else {
-    alertSuccess(`<h2>Assets (${foundAssets.length}):</h2><pre>` + JSON.stringify(foundAssets, undefined, 2) + '</pre>')
-  }
-})
-
 getAssetsMetadata.addEventListener('click', async () => {
   toggleSpinner('show')
-  if (!assets) {
-    alertError('Should find assets first')
+  if (!accountBalance) {
+    alertError('Should get account balance first')
     return
   }
 
   let metadatum = []
 
-  for (let i = 0; i < assets.length; i++) {
+  const assetIds = Object.keys(accountBalance.assets)
+
+  for (let i = 0; i < assetIds.length; i++) {
+    const splitId = assetIds[i].split('.')
+    const assetPolicy = splitId[0]
+    const assetName = splitId[1]
     const metadataResponse = await axios.post("https://testnet-backend.yoroiwallet.com/api/multiAsset/metadata", {
-      assets: [{ name: `${Buffer.from(assets[i].name, "hex").toString("utf-8")}`, policy: `${assets[i].policyId}` }]
+      assets: [{ name: `${Buffer.from(assetName, "hex").toString("utf-8")}`, policy: assetPolicy }]
     })
-    const metadata = metadataResponse.data[`${assets[i].policyId}.${Buffer.from(assets[i].name, "hex").toString("utf-8")}`]
+    const metadata = metadataResponse.data[`${assetPolicy}.${Buffer.from(assetName, "hex").toString("utf-8")}`]
     if (metadata) {
       for (let i = 0; i < metadata.length; i++) {
         metadatum.push(metadata[i])
       }
     }
-
   }
   alertSuccess(`<h2>Assets (${metadatum.length}):</h2><pre>` + JSON.stringify(metadatum, undefined, 2) + '</pre>')
   toggleSpinner('hide')
+})
+
+signSendToDatumEqualsRedeemerTx.addEventListener('click', () => {
+  if (!accessGranted) {
+    alertError('Should request access first');
+    return;
+  }
+
+  if (!utxos || utxos.length === 0) {
+    alertError('Should request utxos first');
+    return
+  }
+
+  if (!changeAddress) {
+    alertError('Should request change address first')
+  }
+
+  const txBuilder = CardanoWasm.TransactionBuilder.new(
+    CardanoWasm.TransactionBuilderConfigBuilder.new()
+      // all of these are taken from the mainnet genesis settings
+      // linear fee parameters (a*size + b)
+      .fee_algo(
+        CardanoWasm.LinearFee.new(
+          CardanoWasm.BigNum.from_str('44'),
+          CardanoWasm.BigNum.from_str('155381'),
+        )
+      )
+      .coins_per_utxo_word(CardanoWasm.BigNum.from_str('34482'))
+      .pool_deposit(CardanoWasm.BigNum.from_str('500000000'))
+      .key_deposit(CardanoWasm.BigNum.from_str('2000000'))
+      .max_value_size(5000)
+      .max_tx_size(16384)
+      .build()
+  )
+
+  var utxo = utxos[6]
+
+  const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
+  const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
+  const keyHash = baseAddr.payment_cred().to_keyhash();
+
+  const { tx, value } = utxoJSONToTransactionInput(utxo)
+
+  // Add utxo with NFT
+  txBuilder.add_key_input(
+    keyHash,
+    tx,
+    value
+  )
+
+  // Add another UTXO to pay fees
+  txBuilder.add_key_input(
+    CardanoWasm.BaseAddress.from_address(CardanoWasm.Address.from_bech32(utxos[1].receiver)).payment_cred().to_keyhash(),
+    CardanoWasm.TransactionInput.new(
+      CardanoWasm.TransactionHash.from_bytes(
+        Buffer.from(utxos[1].tx_hash, 'hex')
+      ),
+      utxos[1].tx_index,
+    ),
+    CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxos[1].amount))
+  )
+
+  const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress)
+
+  const plutusScriptAddress = CardanoWasm.Address.from_bech32("addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge")
+
+  const datumPayload = document.querySelector('#sign-send-to-script-payload').value;
+
+  let scriptData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str("42"))
+
+  if (datumPayload !== "" && !isNaN(datumPayload)) {
+    scriptData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(datumPayload))
+  }
+
+  const scriptDataHash = CardanoWasm.hash_plutus_data(scriptData)
+
+  // min UTXO value becomes bigger due to the addition of plutus scripts
+  // so we set the coin value higher than before
+  value.set_coin(CardanoWasm.BigNum.from_str("2000000"));
+
+  const outputToScript = CardanoWasm.TransactionOutput.new(
+    plutusScriptAddress,
+    value
+  )
+
+  outputToScript.set_data_hash(scriptDataHash)
+
+  // add output to the tx
+  txBuilder.add_output(
+    outputToScript
+  )
+
+  const ttl = getTtl()
+  txBuilder.set_ttl(ttl)
+
+  // calculate the min fee required and send any change to an address
+  txBuilder.add_change_if_needed(shelleyChangeAddress)
+
+  const txBody = txBuilder.build()
+  const txHex = Buffer.from(txBody.to_bytes()).toString('hex')
+  console.log(txHex);
+  cardanoApi.signTx(txHex, true).then(witnessSetHex => {
+    toggleSpinner('hide')
+
+    const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(
+      Buffer.from(witnessSetHex, 'hex')
+    )
+    const transaction = CardanoWasm.Transaction.new(
+      txBody,
+      witnessSet,
+      undefined,
+    )
+    transactionHex = Buffer.from(transaction.to_bytes()).toString('hex')
+    alertSuccess('Signing tx succeeds: ' + transactionHex)
+
+  }).catch(error => {
+    console.error(error)
+    toggleSpinner('hide')
+    alertWarrning('Signing tx fails')
+  })
+})
+
+signSpendDatumEqualsRedeemerTx.addEventListener('click', () => {
+  toggleSpinner('show');
+
+  if (!accessGranted) {
+    alertError('Should request access first');
+    return;
+  }
+
+  if (!utxos || utxos.length === 0) {
+    alertError('Should request utxos first');
+    return
+  }
+
+  if (!changeAddress) {
+    alertError('Should request change address first')
+  }
+
+  const txBuilder = CardanoWasm.TransactionBuilder.new(
+    CardanoWasm.TransactionBuilderConfigBuilder.new()
+      // all of these are taken from the mainnet genesis settings
+      // linear fee parameters (a*size + b)
+      .fee_algo(
+        CardanoWasm.LinearFee.new(
+          CardanoWasm.BigNum.from_str('44'),
+          CardanoWasm.BigNum.from_str('155381'),
+        )
+      )
+      .coins_per_utxo_word(CardanoWasm.BigNum.from_str('34482'))
+      .pool_deposit(CardanoWasm.BigNum.from_str('500000000'))
+      .key_deposit(CardanoWasm.BigNum.from_str('2000000'))
+      .max_value_size(5000)
+      .max_tx_size(16384)
+      .build()
+  )
+
+  let collateralUtxo = utxos[6]
+
+  // Use the largest utxo, you can use any UTXO selection process you like
+  for (let i = 1; i < utxos.length; i++) {
+    if (parseInt(collateralUtxo.amount) < parseInt(utxos[i].amount)) {
+      collateralUtxo = utxos[i]
+    }
+  }
+
+  const addr = CardanoWasm.Address.from_bech32(collateralUtxo.receiver)
+
+  const baseAddr = CardanoWasm.BaseAddress.from_address(addr)
+  const keyHash = baseAddr.payment_cred().to_keyhash()
+
+  // Actually this is purely to force yoroi to include the signature to spend collateral
+  txBuilder.add_key_input(
+    keyHash,
+    CardanoWasm.TransactionInput.new(
+      CardanoWasm.TransactionHash.from_bytes(
+        Buffer.from(collateralUtxo.tx_hash, "hex")
+      ), // tx hash
+      collateralUtxo.tx_index, // index
+    ),
+    CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(collateralUtxo.amount))
+  )
+
+  // this is the UTXO from the plutus script, hard coded
+  const plutusScriptUTXO = {
+    "utxo_id": "4e94ede1b6810fd3fc566cbe6646003bd12732e28b56539549d20e4d2730887d0",
+    "tx_hash": "4e94ede1b6810fd3fc566cbe6646003bd12732e28b56539549d20e4d2730887d",
+    "tx_index": "0",
+    "receiver": "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge",
+    "amount": "2000000",
+    "assets": []
+  }
+
+  const { tx, value } = utxoJSONToTransactionInput(plutusScriptUTXO)
+
+  txBuilder.add_input(
+    CardanoWasm.Address.from_bech32("addr_test1wpnlxv2xv9a9ucvnvzqakwepzl9ltx7jzgm53av2e9ncv4sysemm8"),
+    tx,
+    value
+  )
+
+  const collateral = CardanoWasm.TransactionInputs.new()
+  collateral.add(
+    CardanoWasm.TransactionInput.new(
+      CardanoWasm.TransactionHash.from_bytes(
+        Buffer.from(collateralUtxo.tx_hash, "hex")
+      ), // tx hash
+      collateralUtxo.tx_index, // index
+    ),
+    CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(collateralUtxo.amount))
+  )
+
+  const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress)
+
+  const fee = "300000"
+
+  txBuilder.set_fee(CardanoWasm.BigNum.from_str(fee))
+
+  const outputValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000").checked_add(CardanoWasm.BigNum.from_str(collateralUtxo.amount)).checked_sub(CardanoWasm.BigNum.from_str(fee)));
+  outputValue.set_multiasset(value.multiasset());
+
+  txBuilder.add_output(
+    CardanoWasm.TransactionOutput.new(
+      shelleyChangeAddress,
+      outputValue
+    )
+  )
+
+  const txBody = txBuilder.build()
+
+  // // build everything required for the script data hash
+  const redeemerPayload = document.querySelector('#sign-redeem-from-script-payload').value;
+  console.log(redeemerPayload)
+
+  let plutusData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str("42"))
+
+  if (redeemerPayload !== "" && !isNaN(redeemerPayload)) {
+    plutusData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemerPayload))
+  }
+
+  const redeemers = CardanoWasm.Redeemers.new()
+  const exUnits = CardanoWasm.ExUnits.new(CardanoWasm.BigNum.from_str("170000"), CardanoWasm.BigNum.from_str("47646800"))
+  const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str("0"), plutusData, exUnits)
+  redeemers.add(redeemer)
+  const cost_model_vals = [197209, 0, 1, 1, 396231, 621, 0, 1, 150000, 1000, 0, 1, 150000, 32, 2477736, 29175, 4, 29773, 100, 29773, 100, 29773, 100, 29773, 100, 29773, 100, 29773, 100, 100, 100, 29773, 100, 150000, 32, 150000, 32, 150000, 32, 150000, 1000, 0, 1, 150000, 32, 150000, 1000, 0, 8, 148000, 425507, 118, 0, 1, 1, 150000, 1000, 0, 8, 150000, 112536, 247, 1, 150000, 10000, 1, 136542, 1326, 1, 1000, 150000, 1000, 1, 150000, 32, 150000, 32, 150000, 32, 1, 1, 150000, 1, 150000, 4, 103599, 248, 1, 103599, 248, 1, 145276, 1366, 1, 179690, 497, 1, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 148000, 425507, 118, 0, 1, 1, 61516, 11218, 0, 1, 150000, 32, 148000, 425507, 118, 0, 1, 1, 148000, 425507, 118, 0, 1, 1, 2477736, 29175, 4, 0, 82363, 4, 150000, 5000, 0, 1, 150000, 32, 197209, 0, 1, 1, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 150000, 32, 3345831, 1, 1];
+  const costModel = CardanoWasm.CostModel.new();
+  cost_model_vals.forEach((x, i) => costModel.set(i, CardanoWasm.Int.new_i32(x)));
+  const costmdls = CardanoWasm.Costmdls.new()
+  costmdls.insert(CardanoWasm.Language.new_plutus_v1(), costModel)
+  const plutusList = CardanoWasm.PlutusList.new()
+  plutusList.add(plutusData)
+
+  // For whatever reason, hash_script_data sets plutusList pointer to null,
+  // so we copy plutusList over to another variable first
+  const witnessPlutusList = CardanoWasm.PlutusList.from_bytes(plutusList.to_bytes())
+  const scriptDataHash = CardanoWasm.hash_script_data(redeemers, costmdls, plutusList)
+  txBody.set_script_data_hash(scriptDataHash)
+  txBody.set_collateral(collateral)
+
+  const txHex = Buffer.from(txBody.to_bytes()).toString('hex')
+
+  cardanoApi.signTx(txHex, true).then(witnessSetHex => {
+    toggleSpinner('hide')
+
+    const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(
+      Buffer.from(witnessSetHex, 'hex')
+    )
+    const plutusScripts = CardanoWasm.PlutusScripts.new()
+    plutusScripts.add(CardanoWasm.PlutusScript.from_bytes(Buffer.from("586c586a0100003332223232332232322225335300a333500900800300210071350044911d646174756d20646f6573206e6f7420657175616c2072656465656d65720012350023530033357380020089309309000900091199ab9a3375e00400200c00a240022440042440024003", "hex")))
+
+    witnessSet.set_plutus_scripts(plutusScripts)
+    witnessSet.set_plutus_data(witnessPlutusList)
+    witnessSet.set_redeemers(redeemers)
+
+    const transaction = CardanoWasm.Transaction.new(
+      txBody,
+      witnessSet,
+      undefined,
+    )
+
+    transactionHex = Buffer.from(transaction.to_bytes()).toString('hex')
+    console.log(transactionHex)
+    alertSuccess('Signing tx succeeds: ' + transactionHex)
+  }).catch(error => {
+    console.error(error)
+    toggleSpinner('hide')
+    alertWarrning('Signing tx fails')
+  })
 })
 
 function alertError(text) {

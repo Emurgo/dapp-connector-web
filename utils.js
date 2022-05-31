@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser"
 
 export function getTtl() {
   const fullConfig = [
@@ -119,4 +120,28 @@ function genTimeToSlot(
       msIntoSlot: (1000 * secondsIntoSlot) + msIntoSlot,
     };
   };
+}
+
+
+export function utxoJSONToTransactionInput(utxo) {
+  const utxoValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxo.amount))
+
+  const NFTMultiAsset = CardanoWasm.MultiAsset.new()
+
+  for (let i = 0; i < utxo.assets.length; i++) {
+    const NFTAsset = CardanoWasm.Assets.new();
+    NFTAsset.insert(CardanoWasm.AssetName.new(Buffer.from(utxo.assets[i].name, "hex")), CardanoWasm.BigNum.from_str(utxo.assets[i].amount))
+    NFTMultiAsset.insert(CardanoWasm.ScriptHash.from_bytes(Buffer.from(utxo.assets[i].policyId, "hex")), NFTAsset)
+  }
+  utxoValue.set_multiasset(NFTMultiAsset);
+
+  return ({
+    "tx": CardanoWasm.TransactionInput.new(
+      CardanoWasm.TransactionHash.from_bytes(
+        Buffer.from(utxo.tx_hash, 'hex')
+      ),
+      utxo.tx_index,
+    ),
+    "value": utxoValue
+  })
 }

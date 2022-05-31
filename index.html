@@ -49,7 +49,8 @@
           <button id="get-reward-addresses" class="btn btn-light w-100" >Get Reward Addresses</button>
         </div>
         <div class="col-6 mb-4">
-          <button id="get-utxos" class="btn btn-light w-100" >Get Utxos</button>
+          <input class="w-40" type="text" placeholder="Enter a value" value="" id="get-utxos-payload" />
+          <button id="get-utxos" class="btn btn-light w-50" >Get Utxos</button>
         </div>
         <div class="col-6 mb-4">
           <button id="create-tx" class="btn btn-light w-100">[Experimental] Create Tx</button>
@@ -65,15 +66,21 @@
           <button id="sign-data" class="btn btn-light w-50">Sign data</button>
         </div>
       <h3>NFT</h3>
-      <div>Some examples of things you can do related to NFTs using the APIs from the dapp connector</div>
+      <div>Some examples of things you can do related to NFTs</div>
       <div class="col-6 mb-4">
         <button id="mint-NFT" class="btn btn-light w-100">Sign Mint NFT</button>
       </div>
       <div class="col-6 mb-4">
-        <button id="find-assets" class="btn btn-light w-100">Find Assets</button>
+        <button id="get-assets-metadata" class="btn btn-light w-100">Get Assets Metadata</button>
+      </div>
+      <h3>Plutus Transactions</h3>
+      <div class="col-6 mb-4">
+        <input class="w-40" type="text" placeholder="Enter a datum" value="" id="sign-send-to-script-payload" />
+        <button id="sign-send-to-datum-equals-redeemer-tx" class="btn btn-light w-50">Sign Send To Datum Equal Redeemer</button>
       </div>
       <div class="col-6 mb-4">
-        <button id="get-assets-metadata" class="btn btn-light w-100">Get Assets Metadata</button>
+        <input class="w-40" type="text" placeholder="Enter a redeemer" value="" id="sign-redeem-from-script-payload" />
+        <button id="sign-spend-datum-equals-redeemer-tx" class="btn btn-light w-50">Sign Spend Datum Equal Redeemer</button>
       </div>
       <h3>Submit</h3>
       <div class="col-6 mb-4">
@@ -90,7 +97,7 @@
     </div>
     <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj" crossorigin="anonymous"></script>
-    <script src="./bootstrap.js"></script>
+    <script type="module" src="./bootstrap.js"></script>
   </body>
 
 </html>
