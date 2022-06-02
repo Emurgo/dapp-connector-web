@@ -1,4 +1,4 @@
-FROM node:16.14.2-alpine3.12 as build-stage
+FROM node:16.14.2-alpine3.14 as build-stage
 
 WORKDIR /usr/src/app
 RUN apk add git
