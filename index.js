@@ -1372,6 +1372,8 @@ function toggleConnectionUI(status) {
   }
 }
 
+console.log('1');
+
 const onload = window.onload;
 window.onload = function () {
   if (onload) {
