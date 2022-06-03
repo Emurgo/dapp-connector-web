@@ -1,10 +1,9 @@
+import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser";
 import axios from "axios";
 import { textPartFromWalletChecksumImagePart } from "@emurgo/cip4-js";
 import { createIcon } from "@download/blockies";
 import { getTtl, utxoJSONToTransactionInput } from "./utils";
 import { bytesToHex, hexToBytes } from "./coreUtils";
-
-let CardanoWasm;
 
 const cardanoAccessBtnRow = document.querySelector("#request-button-row");
 const cardanoAuthCheck = document.querySelector("#check-identification");
