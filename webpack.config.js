@@ -11,4 +11,9 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin(['index.html', 'favicon.ico'])
   ],
+  devServer: {
+    compress: true,
+    disableHostCheck: true,   
+  }
+
 };
