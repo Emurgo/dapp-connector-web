@@ -1372,38 +1372,37 @@ function toggleConnectionUI(status) {
   }
 }
 
-console.log('2222');
-
 const onload = window.onload;
 window.onload = function () {
   if (onload) {
     onload();
   }
-  setTimeout(() => {
-    if (typeof window.cardano === "undefined") {
-      alertError("Cardano API not found");
-    } else {
-      console.log("Cardano API detected, checking connection status");
-      cardano.yoroi
-        .enable({ requestIdentification: true, onlySilent: true })
-        .then(
-          (api) => {
-            console.log("successful silent reconnection");
-            onApiConnectied(api);
-          },
-          (err) => {
-            if (String(err).includes("onlySilent:fail")) {
-              console.log("no silent re-connection available");
-            } else {
-              console.error(
-                "Silent reconnection failed for unknown reason!",
-                err
-              );
-            }
-            toggleSpinner("hide");
-            toggleConnectionUI("button");
+  console.log('onload 1');
+  if (typeof window.cardano === "undefined") {
+    console.log('onload 2');
+    alertError("Cardano API not found");
+  } else {
+    console.log('onload 3');
+    console.log("Cardano API detected, checking connection status");
+    cardano.yoroi
+      .enable({ requestIdentification: true, onlySilent: true })
+      .then(
+        (api) => {
+          console.log("successful silent reconnection");
+          onApiConnectied(api);
+        },
+        (err) => {
+          if (String(err).includes("onlySilent:fail")) {
+            console.log("no silent re-connection available");
+          } else {
+            console.error(
+              "Silent reconnection failed for unknown reason!",
+              err
+            );
           }
-        );
-    }
-  }, [2000]);
+          toggleSpinner("hide");
+          toggleConnectionUI("button");
+        }
+      );
+  }
 };
