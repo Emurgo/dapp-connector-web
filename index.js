@@ -1373,14 +1373,14 @@ function toggleConnectionUI(status) {
   }
 }
 
-const onload = window.onload;
-window.onload = async function () {
-  CardanoWasm = await import('@emurgo/cardano-serialization-lib-browser');
-  if (onload) {
-    onload();
-  }
-  if (typeof window.cardano === "undefined") {
+let wait = false;
+const interval = setInterval(() => {
+  if (wait) return;
+  wait = true;
+
+  if (!window || !window.cardano) {
     alertError("Cardano API not found");
+    wait = false;
   } else {
     cardano.yoroi
       .enable({ requestIdentification: true, onlySilent: true })
@@ -1388,6 +1388,7 @@ window.onload = async function () {
         (api) => {
           console.log("successful silent reconnection");
           onApiConnectied(api);
+          clearInterval(interval);
         },
         (err) => {
           if (String(err).includes("onlySilent:fail")) {
@@ -1400,7 +1401,40 @@ window.onload = async function () {
           }
           toggleSpinner("hide");
           toggleConnectionUI("button");
+          clearInterval(interval);
         }
       );
   }
-};
+}, 100);
+
+// const onload = window.onload;
+// window.onload = async function () {
+//   console.log('onload');
+//   if (onload) {
+//     onload();
+//   }
+//   if (typeof window.cardano === "undefined") {
+//     alertError("Cardano API not found");
+//   } else {
+//     cardano.yoroi
+//       .enable({ requestIdentification: true, onlySilent: true })
+//       .then(
+//         (api) => {
+//           console.log("successful silent reconnection");
+//           onApiConnectied(api);
+//         },
+//         (err) => {
+//           if (String(err).includes("onlySilent:fail")) {
+//             console.log("no silent re-connection available");
+//           } else {
+//             console.error(
+//               "Silent reconnection failed for unknown reason!",
+//               err
+//             );
+//           }
+//           toggleSpinner("hide");
+//           toggleConnectionUI("button");
+//         }
+//       );
+//   }
+// };
