@@ -1,3 +1,5 @@
+console.log('1');
+
 import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser";
 import axios from "axios";
 import { textPartFromWalletChecksumImagePart } from "@emurgo/cip4-js";
@@ -1371,8 +1373,6 @@ function toggleConnectionUI(status) {
     connectionStatus.classList.remove("d-none");
   }
 }
-
-console.log('1');
 
 const onload = window.onload;
 window.onload = function () {
