@@ -1372,11 +1372,7 @@ function toggleConnectionUI(status) {
   }
 }
 
-const onload = window.onload;
-window.onload = function () {
-  if (onload) {
-    onload();
-  }
+window.addEventListener('load', () => {
   console.log('onload 1');
   if (typeof window.cardano === "undefined") {
     console.log('onload 2');
@@ -1405,4 +1401,4 @@ window.onload = function () {
         }
       );
   }
-};
+});
