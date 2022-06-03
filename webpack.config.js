@@ -10,7 +10,7 @@ module.exports = {
   mode: "development",
   plugins: [new CopyWebpackPlugin(["index.html", "favicon.ico"])],
   devServer: {
-    host: ‘0.0.0.0’,
+    host: "0.0.0.0",
     disableHostCheck: true,
     hot: true,
     sockPort: 443,
