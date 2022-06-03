@@ -1,9 +1,10 @@
-import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser";
 import axios from "axios";
 import { textPartFromWalletChecksumImagePart } from "@emurgo/cip4-js";
 import { createIcon } from "@download/blockies";
 import { getTtl, utxoJSONToTransactionInput } from "./utils";
 import { bytesToHex, hexToBytes } from "./coreUtils";
+
+let CardanoWasm;
 
 const cardanoAccessBtnRow = document.querySelector("#request-button-row");
 const cardanoAuthCheck = document.querySelector("#check-identification");
@@ -1372,14 +1373,15 @@ function toggleConnectionUI(status) {
   }
 }
 
-window.addEventListener('load', () => {
-  console.log('onload 1');
+const onload = window.onload;
+window.onload = async function () {
+  CardanoWasm = await import('@emurgo/cardano-serialization-lib-browser');
+  if (onload) {
+    onload();
+  }
   if (typeof window.cardano === "undefined") {
-    console.log('onload 2');
     alertError("Cardano API not found");
   } else {
-    console.log('onload 3');
-    console.log("Cardano API detected, checking connection status");
     cardano.yoroi
       .enable({ requestIdentification: true, onlySilent: true })
       .then(
@@ -1401,4 +1403,4 @@ window.addEventListener('load', () => {
         }
       );
   }
-});
+};
