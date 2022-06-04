@@ -231,11 +231,11 @@ getAccountBalance.addEventListener("click", () => {
   }
 });
 
-async function addressesFromCborIfNeeded(addresses) {
+function addressesFromCborIfNeeded(addresses) {
   return isCBOR()
     ? addresses.map(
-        async (a) =>
-          await CardanoWasm.Address.from_bytes(hexToBytes(a)).to_bech32()
+        (a) =>
+          CardanoWasm.Address.from_bytes(hexToBytes(a)).to_bech32()
       )
     : addresses;
 }
@@ -255,8 +255,7 @@ getUnUsedAddresses.addEventListener("click", () => {
         alertWarrning("No unused addresses");
         return;
       }
-      addresses = addressesFromCborIfNeeded(addresses);
-      unusedAddresses = addresses;
+      unusedAddresses = addressesFromCborIfNeeded(addresses);
       alertSuccess(`Address: `);
       alertEl.innerHTML =
         "<h2>Unused addresses:</h2><pre>" +
@@ -279,7 +278,7 @@ getUsedAddresses.addEventListener("click", () => {
           alertWarrning("No used addresses");
           return;
         }
-        usedAddresses = addressesFromCborIfNeeded(addresses);
+        usedAddresses = addressesFromCborIfNeeded(addresses)
         alertSuccess(`Address: ${usedAddresses.concat(",")}`);
         alertEl.innerHTML =
           "<h2>Used addresses:</h2><pre>" +
