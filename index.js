@@ -279,7 +279,7 @@ getChangeAddress.addEventListener('click', () => {
       }
       changeAddress = addressesFromCborIfNeeded([address])[0]
       alertSuccess(`Address: `)
-      alertEl.innerHTML = '<h2>Change address:</h2><pre>' + JSON.stringify(address, undefined, 2) + '</pre>'
+      alertEl.innerHTML = '<h2>Change address:</h2><pre>' + JSON.stringify(changeAddress, undefined, 2) + '</pre>'
     });
   }
 })
@@ -1143,11 +1143,7 @@ function toggleConnectionUI(status) {
   }
 }
 
-const onload = window.onload;
-window.onload = function () {
-  if (onload) {
-    onload();
-  }
+const load = function () {
   if (typeof window.cardano === "undefined") {
     alertError("Cardano API not found");
   } else {
@@ -1169,3 +1165,5 @@ window.onload = function () {
     );
   }
 }
+
+load();
