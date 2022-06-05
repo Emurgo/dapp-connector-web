@@ -56,7 +56,8 @@ let plutusInfo = {
   "tx_index": "0",
   "receiver": "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge",
   "amount": "",
-  "assets": []
+  "assets": [],
+  "datum": null
 }
 
 function isCBOR() {
@@ -397,9 +398,6 @@ submitTx.addEventListener('click', () => {
 
   toggleSpinner('show')
   cardanoApi.submitTx(transactionHex).then(txId => {
-    plutusInfo.tx_hash = txId
-    plutusInfo.utxo_id = txId + plutusInfo.tx_index
-    console.log(plutusInfo)
     toggleSpinner('hide')
     alertSuccess(`Transaction ${txId} submitted`);
   }).catch(error => {
@@ -428,6 +426,7 @@ signTx.addEventListener('click', () => {
 
     if (!changeAddress) {
       alertError('Should request change address first')
+      return;
     }
 
     const txBuilder = CardanoWasm.TransactionBuilder.new(
@@ -744,6 +743,7 @@ mintNFT.addEventListener('click', async () => {
 
   if (!changeAddress) {
     alertError('Should request change address first')
+    return;
   }
 
   const txBuilder = CardanoWasm.TransactionBuilder.new(
@@ -887,6 +887,7 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
   if (!changeAddress) {
     alertError('Should request change address first')
+    return;
   }
 
   const txBuilder = CardanoWasm.TransactionBuilder.new(
@@ -938,6 +939,8 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
     scriptData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(datumPayload))
   }
 
+  plutusInfo.datum = scriptData
+
   const scriptDataHash = CardanoWasm.hash_plutus_data(scriptData)
 
   const outputToScript = CardanoWasm.TransactionOutput.new(
@@ -973,12 +976,15 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
         witnessSet,
         tx.auxiliary_data(),
       );
+      
       for (let i = 0; i < tx.body().outputs().len(); i++) {
         if (tx.body().outputs().get(i).address().to_bech32() == "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge") {
           plutusInfo.tx_index = String(i)
           plutusInfo.amount = tx.body().outputs().get(i).amount().coin().to_str()
         }
       }
+      plutusInfo.tx_hash = Buffer.from(CardanoWasm.hash_transaction(tx.body()).to_bytes()).toString('hex')
+      plutusInfo.utxo_id = Buffer.from(CardanoWasm.hash_transaction(tx.body()).to_bytes()).toString('hex') + plutusInfo.tx_index
       transactionHex = bytesToHex(transaction.to_bytes())
       alertSuccess('Signing tx succeeded: ' + transactionHex)
     }).catch(error => {
@@ -998,6 +1004,12 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
   if (!changeAddress) {
     alertError('Should request change address first')
+    return;
+  }
+
+  if (!plutusInfo.datum) {
+    alertError('Should first send to script')
+    return;
   }
 
   const txBuilder = CardanoWasm.TransactionBuilder.new(
@@ -1053,8 +1065,7 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
   const plutusScript = CardanoWasm.PlutusScript
     .from_bytes(hexToBytes(plutusScriptHEX));
 
-  const datum = CardanoWasm.PlutusData
-    .new_integer(CardanoWasm.BigInt.from_str("42"));
+  const datum = plutusInfo.datum
 
   const redeemerPayload = document.querySelector('#sign-redeem-from-script-payload').value;
 
