@@ -63,7 +63,7 @@
         <button id="create-tx" class="btn btn-light w-100">[Experimental] Create Tx</button>
       </div>
       <div class="col-6 mb-2">
-        <button id="sign-tx" class="btn btn-light w-100">Sign Tx</button>
+        <button id="sign-tx" class="btn btn-light w-100">Sign Send Tx</button>
       </div>
       <div class="col-6 mb-2">
         <button id="get-collateral-utxos" class="btn btn-light w-100">Get collateral UTXOS</button>
@@ -91,11 +91,21 @@
         <button id="sign-spend-datum-equals-redeemer-tx" class="btn btn-light w-50">Sign Spend Datum Equal
           Redeemer</button>
       </div>
-      <div class="col-6 mb-2">
+    </div>
+    <div class="d-none" id="alert" role="alert"></div>
+    <div class="d-flex">
+      <div class="col-2 mb-2 alert alert-info">
+        Current signed Tx:
+      </div>
+      <div id="signed-tx-type" class="col-2 mb-2 mx-2 alert alert-info">
+        None
+      </div>
+      <div id="signed-tx-hex" class="col-4 mb-2 mx-2 alert alert-info overflow-hidden">
+      </div>
+      <div class="col-3 mb-2">
         <button id="submit-tx" class="btn btn-light w-100">Submit Tx</button>
       </div>
     </div>
-    <div class="d-none" id="alert" role="alert"></div>
   </div>
   <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"

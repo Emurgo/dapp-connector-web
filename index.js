@@ -529,7 +529,7 @@ signTx.addEventListener('click', () => {
 
     unsignedTransactionHex = null;
     alertSuccess('Signing tx succeeded: ' + transactionHex)
-
+    setSignedTxAlerts("Send Tx", transactionHex)
   }).catch(error => {
     console.error(error)
     toggleSpinner('hide')
@@ -843,6 +843,7 @@ mintNFT.addEventListener('click', async () => {
       );
       transactionHex = bytesToHex(transaction.to_bytes())
       alertSuccess('Signing tx succeeded: ' + transactionHex)
+      setSignedTxAlerts("Mint NFT", transactionHex)
     }).catch(error => {
       console.error(error)
       toggleSpinner('hide')
@@ -987,6 +988,7 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
       plutusInfo.utxo_id = Buffer.from(CardanoWasm.hash_transaction(tx.body()).to_bytes()).toString('hex') + plutusInfo.tx_index
       transactionHex = bytesToHex(transaction.to_bytes())
       alertSuccess('Signing tx succeeded: ' + transactionHex)
+      setSignedTxAlerts("Send To Script", transactionHex)
     }).catch(error => {
       console.error(error)
       toggleSpinner('hide')
@@ -1112,6 +1114,7 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
       );
       transactionHex = bytesToHex(transaction.to_bytes())
       alertSuccess('Signing tx succeeded: ' + transactionHex)
+      setSignedTxAlerts("Spend Script UTXO", transactionHex)
     }).catch(error => {
       console.error(error)
       toggleSpinner('hide')
@@ -1154,7 +1157,12 @@ function toggleConnectionUI(status) {
   }
 }
 
-const load = function () {
+function setSignedTxAlerts(txType, txHex) {
+  document.querySelector("#signed-tx-type").textContent = txType
+  document.querySelector("#signed-tx-hex").textContent = txHex
+}
+
+function load() {
   if (typeof window.cardano === "undefined") {
     alertError("Cardano API not found");
   } else {
