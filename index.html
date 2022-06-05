@@ -72,15 +72,25 @@
         <input class="w-40" type="text" value="sign me" id="sign-data-payload" />
         <button id="sign-data" class="btn btn-light w-50">Sign data</button>
       </div>
-      <h5>NFT</h5>
-      <div>Some examples of things you can do related to NFTs</div>
+      <div class="d-flex mt-4">
+        <h5>NFT</h5>
+        <div class="mx-2">
+          Mint an NFT, then get its metadata!
+        </div>
+      </div>
       <div class="col-6 mb-2">
         <button id="mint-NFT" class="btn btn-light w-100">Sign Mint NFT</button>
       </div>
       <div class="col-6 mb-2">
         <button id="get-assets-metadata" class="btn btn-light w-100">Get Assets Metadata</button>
       </div>
-      <h5>Plutus Transactions</h5>
+      <div class="d-flex mt-4">
+        <h5>Plutus Transactions</h5>
+        <div class="mx-2">
+          (please ensure datum and redeemer are valid numbers) - the script checks if they are equal
+        </div>
+      </div>
+
       <div class="col-6 mb-2">
         <input class="w-40" type="text" placeholder="Enter a datum" value="" id="sign-send-to-script-payload" />
         <button id="sign-send-to-datum-equals-redeemer-tx" class="btn btn-light w-50">Sign Send To Datum Equal
