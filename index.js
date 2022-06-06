@@ -4,6 +4,7 @@ import { textPartFromWalletChecksumImagePart } from "@emurgo/cip4-js"
 import { createIcon } from "@download/blockies"
 import { getTtl, utxoJSONToTransactionInput } from './utils'
 import { bytesToHex, hexToBytes } from './coreUtils';
+import { Buffer } from "buffer"
 
 const cardanoAccessBtnRow = document.querySelector('#request-button-row')
 const cardanoAuthCheck = document.querySelector('#check-identification')
