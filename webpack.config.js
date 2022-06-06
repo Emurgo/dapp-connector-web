@@ -9,24 +9,15 @@ module.exports = {
     filename: "bootstrap.js",
   },
   mode: "development",
-  plugins: [
-    new CopyWebpackPlugin(['index.html', 'favicon.ico']),
-    new FilterWarningsPlugin({
-      exclude: [/Critical dependency/]
-    })
-  ],
-  resolve: {
-    extensions: ['*', '.js', '.wasm'],
-    fallback: {
-      fs: false,
-      path: require.resolve('path-browserify'),
-      stream: require.resolve('stream-browserify'),
-      zlib: require.resolve('browserify-zlib'),
-      crypto: require.resolve('crypto-browserify'),
-      buffer: require.resolve('buffer'),
-    },
+  plugins: [new CopyWebpackPlugin(["index.html", "favicon.ico"]),
+  new FilterWarningsPlugin({
+    exclude: [/Critical dependency/]
+  })],
+  experiments: { syncWebAssembly: true },
+  devServer: {
+    host: "0.0.0.0",
+    allowedHosts: "all",
+    hot: true,
+    port: 443,
   },
-
-  experiments: { syncWebAssembly: true }
-
 };
