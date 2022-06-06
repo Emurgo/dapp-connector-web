@@ -1,4 +1,5 @@
 // @flow
+import { Buffer } from "buffer";
 
 export function bytesToHex(bytes) {
   return Buffer.from(bytes).toString('hex');

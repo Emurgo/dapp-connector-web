@@ -1,4 +1,5 @@
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const FilterWarningsPlugin = require('webpack-filter-warnings-plugin');
 const path = require('path');
 
 module.exports = {
@@ -9,7 +10,10 @@ module.exports = {
   },
   mode: "development",
   plugins: [
-    new CopyWebpackPlugin(['index.html', 'favicon.ico'])
+    new CopyWebpackPlugin(['index.html', 'favicon.ico']),
+    new FilterWarningsPlugin({
+      exclude: [/Critical dependency/]
+    })
   ],
   resolve: {
     extensions: ['*', '.js', '.wasm'],
