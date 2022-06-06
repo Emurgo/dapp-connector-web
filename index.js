@@ -146,6 +146,13 @@ function onApiConnectied(api) {
       console.error('Sig failed', err);
     });
   }
+  // hacky fix to assert wallet is testnet
+  // while getNetworkId() has not yet been implemented
+  cardanoApi.getChangeAddress().then(function (address) {
+    if (addressesFromCborIfNeeded([address])[0].slice(0, 9) != "addr_test") {
+      alert("Non testnet wallet detected, demo app was built for testnet, functions will not work as intended, funds are at risk, please disonnect wallet and reconnect")
+    }
+  })
 }
 
 function reduceWasmMultiasset(multiasset, reducer, initValue) {
@@ -977,7 +984,7 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
         witnessSet,
         tx.auxiliary_data(),
       );
-      
+
       for (let i = 0; i < tx.body().outputs().len(); i++) {
         if (tx.body().outputs().get(i).address().to_bech32() == "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge") {
           plutusInfo.tx_index = String(i)
@@ -1088,7 +1095,7 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
   );
 
   const plutusScriptWitness = CardanoWasm.PlutusWitness.new(plutusScript, datum, redeemer)
-  
+
   const { tx, value } = utxoJSONToTransactionInput(plutusInfo)
 
   txBuilder.add_plutus_script_input(plutusScriptWitness, tx, value)
