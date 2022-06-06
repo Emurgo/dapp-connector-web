@@ -1,5 +1,6 @@
 import BigNumber from 'bignumber.js';
 import * as CardanoWasm from "@emurgo/cardano-serialization-lib-browser"
+import { Buffer } from 'buffer';
 
 export function getTtl() {
   const fullConfig = [

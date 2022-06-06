@@ -1131,17 +1131,17 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
 function alertError(text) {
   toggleSpinner('hide');
-  alertEl.className = 'alert alert-danger'
+  alertEl.className = 'alert alert-danger overflow-auto'
   alertEl.innerHTML = text
 }
 
 function alertSuccess(text) {
-  alertEl.className = 'alert alert-success'
+  alertEl.className = 'alert alert-success overflow-auto'
   alertEl.innerHTML = text
 }
 
 function alertWarrning(text) {
-  alertEl.className = 'alert alert-warning'
+  alertEl.className = 'alert alert-warning overflow-auto'
   alertEl.innerHTML = text
 }
 
