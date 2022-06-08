@@ -252,9 +252,9 @@ getAccountBalance.addEventListener("click", () => {
 function addressesFromCborIfNeeded(addresses) {
   return isCBOR()
     ? addresses.map(
-        (a) =>
-          CardanoWasm.Address.from_bytes(hexToBytes(a)).to_bech32()
-      )
+      (a) =>
+        CardanoWasm.Address.from_bytes(hexToBytes(a)).to_bech32()
+    )
     : addresses;
 }
 
@@ -419,8 +419,8 @@ window._getUtxos = function (value) {
       utxos = isCBOR() ? mapCborUtxos(utxosResponse) : utxosResponse;
       alertSuccess(
         `<h2>UTxO (${utxos.length}):</h2><pre>` +
-          JSON.stringify(utxos, undefined, 2) +
-          "</pre>"
+        JSON.stringify(utxos, undefined, 2) +
+        "</pre>"
       );
     }
   });
@@ -465,7 +465,7 @@ const AMOUNT_TO_SEND = "1000000";
 const SEND_TO_ADDRESS =
   "addr_test1qz8xh9w6f2vdnp89xzqlxnusldhz6kdm4rp970gl8swwjjkr3y3kdut55a40jff00qmg74686vz44v6k363md06qkq0q4lztj0";
 
-signTx.addEventListener("click", () => {
+signTx.addEventListener("click", async () => {
   toggleSpinner("show");
 
   if (!accessGranted) {
@@ -502,21 +502,24 @@ signTx.addEventListener("click", () => {
         .build()
     );
 
-    // add a keyhash input - for ADA held in a Shelley-era normal address (Base, Enterprise, Pointer)
-    const utxo = utxos[0];
+    let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
 
-    const addr = CardanoWasm.Address.from_bech32(utxo.receiver);
+    let inputUTXOs = mapCborUtxos(inputUTXOCBOR)
 
-    const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
-    const keyHash = baseAddr.payment_cred().to_keyhash();
-    txBuilder.add_key_input(
-      keyHash,
-      CardanoWasm.TransactionInput.new(
-        CardanoWasm.TransactionHash.from_bytes(hexToBytes(utxo.tx_hash)), // tx hash
-        utxo.tx_index // index
-      ),
-      CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxo.amount))
-    );
+    for (let i = 0; i < inputUTXOs.length; i++) {
+      const utxo = inputUTXOs[i]
+      const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
+      const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
+      const keyHash = baseAddr.payment_cred().to_keyhash();
+
+      const { tx, value } = utxoJSONToTransactionInput(utxo)
+
+      txBuilder.add_key_input(
+        keyHash,
+        tx,
+        value
+      )
+    }
 
     const shelleyOutputAddress =
       CardanoWasm.Address.from_bech32(SEND_TO_ADDRESS);
@@ -765,8 +768,8 @@ getCollateralUtxos.addEventListener("click", () => {
       let utxos = isCBOR() ? mapCborUtxos(utxosResponse) : utxosResponse;
       alertSuccess(
         `<h2>Collateral UTxO (${utxos.length}):</h2><pre>` +
-          JSON.stringify(utxos, undefined, 2) +
-          "</pre>"
+        JSON.stringify(utxos, undefined, 2) +
+        "</pre>"
       );
     })
     .catch((error) => {
@@ -974,7 +977,7 @@ getAssetsMetadata.addEventListener('click', async () => {
     );
     const metadata =
       metadataResponse.data[
-        `${assetPolicy}.${Buffer.from(assetName, "hex").toString("utf-8")}`
+      `${assetPolicy}.${Buffer.from(assetName, "hex").toString("utf-8")}`
       ];
     if (metadata) {
       for (let i = 0; i < metadata.length; i++) {
@@ -984,8 +987,8 @@ getAssetsMetadata.addEventListener('click', async () => {
   }
   alertSuccess(
     `<h2>Assets (${metadatum.length}):</h2><pre>` +
-      JSON.stringify(metadatum, undefined, 2) +
-      "</pre>"
+    JSON.stringify(metadatum, undefined, 2) +
+    "</pre>"
   );
   toggleSpinner("hide");
 });
