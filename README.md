@@ -1,3 +1,7 @@
+**Note**
+
+The Yoroi API `getCollateralUtxo` is named differently to the specification in CIP-30, where it is named `getCollateral`. This will be changed to match CIP-30 in the current deployment of Yoroi.
+
 # dapp-connector-web
 
 Deployed at https://dapp-connector-web.emurgo-rnd.com/
