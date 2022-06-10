@@ -463,7 +463,7 @@ submitTx.addEventListener("click", () => {
 
 const AMOUNT_TO_SEND = "1000000";
 const SEND_TO_ADDRESS =
-  "addr_test1qqxfqw9mpx37345n4agqe68s0g2jthg54fxr8huzj0gu30gx6625c3k4ald5qzspkxcnrq7jq0mffn0rxkdagalj2yyqftvg3d";
+  "addr_test1qz8xh9w6f2vdnp89xzqlxnusldhz6kdm4rp970gl8swwjjkr3y3kdut55a40jff00qmg74686vz44v6k363md06qkq0q4lztj0";
 
 signTx.addEventListener("click", async () => {
   toggleSpinner("show");
@@ -721,13 +721,8 @@ getCollateralUtxos.addEventListener("click", () => {
     return;
   }
 
-  const amount = "4900000";
   cardanoApi
-    .getCollateralUtxos(
-      Buffer.from(
-        CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(amount)).to_bytes()
-      ).toString("hex")
-    )
+    .getCollateral(4900000)
     .then((utxosResponse) => {
       toggleSpinner("hide");
       let utxos = isCBOR() ? mapCborUtxos(utxosResponse) : utxosResponse;
@@ -1032,7 +1027,7 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
   txBuilder.set_inputs(txInputsBuilder)
 
   // handle collateral inputs for 2 ADA
-  let hexCollateralUtxos = await cardanoApi.getCollateralUtxos(2000000)
+  let hexCollateralUtxos = await cardanoApi.getCollateral(2000000)
   const collateralTxInputsBuilder = CardanoWasm.TxInputsBuilder.new()
   for (let i = 0; i < hexCollateralUtxos.length; i++) {
     const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexCollateralUtxos[i]))
