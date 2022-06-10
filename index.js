@@ -484,23 +484,7 @@ signTx.addEventListener("click", async () => {
       return;
     }
 
-    const txBuilder = CardanoWasm.TransactionBuilder.new(
-      CardanoWasm.TransactionBuilderConfigBuilder.new()
-        // all of these are taken from the mainnet genesis settings
-        // linear fee parameters (a*size + b)
-        .fee_algo(
-          CardanoWasm.LinearFee.new(
-            CardanoWasm.BigNum.from_str("44"),
-            CardanoWasm.BigNum.from_str("155381")
-          )
-        )
-        .coins_per_utxo_word(CardanoWasm.BigNum.from_str("34482"))
-        .pool_deposit(CardanoWasm.BigNum.from_str("500000000"))
-        .key_deposit(CardanoWasm.BigNum.from_str("2000000"))
-        .max_value_size(5000)
-        .max_tx_size(16384)
-        .build()
-    );
+    const txBuilder = getTxBuilder()
 
     let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
 
@@ -840,23 +824,7 @@ mintNFT.addEventListener('click', async () => {
     return;
   }
 
-  const txBuilder = CardanoWasm.TransactionBuilder.new(
-    CardanoWasm.TransactionBuilderConfigBuilder.new()
-      // all of these are taken from the mainnet genesis settings
-      // linear fee parameters (a*size + b)
-      .fee_algo(
-        CardanoWasm.LinearFee.new(
-          CardanoWasm.BigNum.from_str("44"),
-          CardanoWasm.BigNum.from_str("155381")
-        )
-      )
-      .coins_per_utxo_word(CardanoWasm.BigNum.from_str("34482"))
-      .pool_deposit(CardanoWasm.BigNum.from_str("500000000"))
-      .key_deposit(CardanoWasm.BigNum.from_str("2000000"))
-      .max_value_size(5000)
-      .max_tx_size(16384)
-      .build()
-  );
+  const txBuilder = getTxBuilder()
 
   let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
 
@@ -999,30 +967,9 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
     return;
   }
 
-  if (!changeAddress) {
-    alertError('Should request change address first')
-    return;
-  }
+  const txBuilder = getTxBuilder()
 
-  const txBuilder = CardanoWasm.TransactionBuilder.new(
-    CardanoWasm.TransactionBuilderConfigBuilder.new()
-      // all of these are taken from the mainnet genesis settings
-      // linear fee parameters (a*size + b)
-      .fee_algo(
-        CardanoWasm.LinearFee.new(
-          CardanoWasm.BigNum.from_str("44"),
-          CardanoWasm.BigNum.from_str("155381")
-        )
-      )
-      .coins_per_utxo_word(CardanoWasm.BigNum.from_str("34482"))
-      .pool_deposit(CardanoWasm.BigNum.from_str("500000000"))
-      .key_deposit(CardanoWasm.BigNum.from_str("2000000"))
-      .max_value_size(5000)
-      .max_tx_size(16384)
-      .build()
-  );
-
-  let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
+  let hexUtxos = await cardanoApi.getUtxos()
 
   let inputUTXOs = mapCborUtxos(inputUTXOCBOR)
 
@@ -1133,27 +1080,7 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
     return;
   }
 
-  const txBuilder = CardanoWasm.TransactionBuilder.new(
-    CardanoWasm.TransactionBuilderConfigBuilder.new()
-      // all of these are taken from the mainnet genesis settings
-      // linear fee parameters (a*size + b)
-      .fee_algo(
-        CardanoWasm.LinearFee.new(
-          CardanoWasm.BigNum.from_str("44"),
-          CardanoWasm.BigNum.from_str("155381")
-        )
-      )
-      .coins_per_utxo_word(CardanoWasm.BigNum.from_str('34482'))
-      .pool_deposit(CardanoWasm.BigNum.from_str('500000000'))
-      .key_deposit(CardanoWasm.BigNum.from_str('2000000'))
-      .ex_unit_prices(CardanoWasm.ExUnitPrices.new(
-        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("721"), CardanoWasm.BigNum.from_str("10000000")),
-        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("577"), CardanoWasm.BigNum.from_str("10000"))
-      ))
-      .max_value_size(5000)
-      .max_tx_size(16384)
-      .build()
-  );
+  const txBuilder = getTxBuilder()
 
   let collateralUTXOCBOR = await cardanoApi.getCollateralUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
 
@@ -1240,6 +1167,30 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
       alertWarrning('Signing tx fails')
     })
 })
+
+function getTxBuilder() {
+  return CardanoWasm.TransactionBuilder.new(
+    CardanoWasm.TransactionBuilderConfigBuilder.new()
+      // all of these are taken from the mainnet genesis settings
+      // linear fee parameters (a*size + b)
+      .fee_algo(
+        CardanoWasm.LinearFee.new(
+          CardanoWasm.BigNum.from_str("44"),
+          CardanoWasm.BigNum.from_str("155381")
+        )
+      )
+      .coins_per_utxo_word(CardanoWasm.BigNum.from_str('34482'))
+      .pool_deposit(CardanoWasm.BigNum.from_str('500000000'))
+      .key_deposit(CardanoWasm.BigNum.from_str('2000000'))
+      .ex_unit_prices(CardanoWasm.ExUnitPrices.new(
+        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("721"), CardanoWasm.BigNum.from_str("10000000")),
+        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("577"), CardanoWasm.BigNum.from_str("10000"))
+      ))
+      .max_value_size(5000)
+      .max_tx_size(16384)
+      .build()
+  );
+}
 
 function alertError(text) {
   toggleSpinner('hide');
