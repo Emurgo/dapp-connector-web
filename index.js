@@ -969,63 +969,34 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
   const txBuilder = getTxBuilder()
 
-  let hexUtxos = await cardanoApi.getUtxos()
-
-  let inputUTXOs = mapCborUtxos(inputUTXOCBOR)
-
-  for (let i = 0; i < inputUTXOs.length; i++) {
-    const utxo = inputUTXOs[i]
-    const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
-    const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
-    const keyHash = baseAddr.payment_cred().to_keyhash();
-
-    const { tx, value } = utxoJSONToTransactionInput(utxo)
-
-    txBuilder.add_key_input(
-      keyHash,
-      tx,
-      value
-    )
+  // get utxos selected for 2 ADA
+  let hexInputUtxos = await cardanoApi.getUtxos("2000000")
+  const txInputsBuilder = CardanoWasm.TxInputsBuilder.new()
+  for (let i = 0; i < hexInputUtxos.length; i++) {
+    const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
+    txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
   }
+  txBuilder.set_inputs(txInputsBuilder)
 
-  const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress);
-
-  const plutusScriptAddress = CardanoWasm.Address.from_bech32(
-    "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge"
-  );
-
-  const datumPayload = document.querySelector(
-    "#sign-send-to-script-payload"
-  ).value;
-
-  let scriptData = CardanoWasm.PlutusData.new_integer(
-    CardanoWasm.BigInt.from_str("42")
-  );
-
-  if (datumPayload !== "" && !isNaN(datumPayload)) {
-    scriptData = CardanoWasm.PlutusData.new_integer(
-      CardanoWasm.BigInt.from_str(datumPayload)
-    );
-  }
-
-  plutusInfo.datum = scriptData
-
+  // generate output with datum equal to user typed payload
+  const plutusScriptAddress = CardanoWasm.Address.from_bech32("addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge");
+  const datumPayload = document.querySelector("#sign-send-to-script-payload").value;
+  let datumValue = datumPayload !== "" && !isNaN(datumPayload) ? datumPayload : "42"
+  let scriptData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(datumValue));
   const scriptDataHash = CardanoWasm.hash_plutus_data(scriptData)
-
   const outputToScript = CardanoWasm.TransactionOutput.new(
     plutusScriptAddress,
     CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000"))
   )
-
   outputToScript.set_data_hash(scriptDataHash);
-
-  // add output to the tx
   txBuilder.add_output(outputToScript);
 
   const ttl = getTtl();
   txBuilder.set_ttl(ttl);
 
   // calculate the min fee required and send any change to an address
+  const hexChangeAddress = await cardanoApi.getChangeAddress()
+  const shelleyChangeAddress = CardanoWasm.Address.from_bytes(hexToBytes(hexChangeAddress));
   txBuilder.add_change_if_needed(shelleyChangeAddress);
 
   const unsignedTransactionHex = bytesToHex(txBuilder.build_tx().to_bytes())
@@ -1044,14 +1015,18 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
         tx.auxiliary_data(),
       );
 
+      // find the output that outputs to script and we will store it
       for (let i = 0; i < tx.body().outputs().len(); i++) {
         if (tx.body().outputs().get(i).address().to_bech32() == "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge") {
           plutusInfo.tx_index = String(i)
           plutusInfo.amount = tx.body().outputs().get(i).amount().coin().to_str()
         }
       }
+      // We have no backend, so we'll just store the transaction locally
+      plutusInfo.datum = scriptData
       plutusInfo.tx_hash = Buffer.from(CardanoWasm.hash_transaction(tx.body()).to_bytes()).toString('hex')
       plutusInfo.utxo_id = Buffer.from(CardanoWasm.hash_transaction(tx.body()).to_bytes()).toString('hex') + plutusInfo.tx_index
+
       transactionHex = bytesToHex(transaction.to_bytes())
       alertSuccess('Signing tx succeeded: ' + transactionHex)
       setSignedTxAlerts("Send To Script", transactionHex)
