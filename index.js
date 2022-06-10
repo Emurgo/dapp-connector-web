@@ -56,13 +56,13 @@ let unsignedTransactionHex;
 let transactionHex;
 
 let plutusInfo = {
-  "utxo_id": "",
-  "tx_hash": "",
+  "utxo_id": "33675af32fcfd9e920c3f07cad94d977dbdb6b3c4ee17f37f9247d74e9c474b90",
+  "tx_hash": "33675af32fcfd9e920c3f07cad94d977dbdb6b3c4ee17f37f9247d74e9c474b9",
   "tx_index": "0",
   "receiver": "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge",
-  "amount": "",
+  "amount": "2000000",
   "assets": [],
-  "datum": null
+  "datum": CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str("10"))
 }
 
 function isCBOR() {
@@ -809,11 +809,11 @@ mintNFT.addEventListener('click', async () => {
   // add utxos for amount
   const txInputsBuilder = CardanoWasm.TxInputsBuilder.new()
   for (let i = 0; i < hexInputUtxos.length; i++) {
-      const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
-      txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
-      if (i == 0) {
-          wasmKeyHash = CardanoWasm.BaseAddress.from_address(wasmUtxo.output().address()).payment_cred().to_keyhash()
-      }
+    const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
+    txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
+    if (i == 0) {
+      wasmKeyHash = CardanoWasm.BaseAddress.from_address(wasmUtxo.output().address()).payment_cred().to_keyhash()
+    }
   }
   txBuilder.set_inputs(txInputsBuilder)
 
@@ -1015,11 +1015,6 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
     return;
   }
 
-  if (!changeAddress) {
-    alertError('Should request change address first')
-    return;
-  }
-
   if (!plutusInfo.datum) {
     alertError('Should first send to script')
     return;
@@ -1027,29 +1022,21 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
   const txBuilder = getTxBuilder()
 
-  let collateralUTXOCBOR = await cardanoApi.getCollateralUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
+  // get utxos selected for 2 ADA
+  let hexInputUtxos = await cardanoApi.getUtxos("2000000")
+  const txInputsBuilder = CardanoWasm.TxInputsBuilder.new()
+  for (let i = 0; i < hexInputUtxos.length; i++) {
+    const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
+    txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
+  }
+  txBuilder.set_inputs(txInputsBuilder)
 
-  const collateralUTXOs = mapCborUtxos(collateralUTXOCBOR)
+  // handle collateral inputs for 2 ADA
+  let hexCollateralUtxos = await cardanoApi.getCollateralUtxos(2000000)
   const collateralTxInputsBuilder = CardanoWasm.TxInputsBuilder.new()
-
-  for (let i = 0; i < collateralUTXOs.length; i++) {
-    const utxo = collateralUTXOs[i]
-    const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
-    const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
-    const keyHash = baseAddr.payment_cred().to_keyhash();
-
-    const { tx, value } = utxoJSONToTransactionInput(utxo)
-
-    txBuilder.add_key_input(
-      keyHash,
-      tx,
-      value
-    )
-    collateralTxInputsBuilder.add_key_input(
-      keyHash,
-      tx,
-      value
-    )
+  for (let i = 0; i < hexCollateralUtxos.length; i++) {
+    const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexCollateralUtxos[i]))
+    collateralTxInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
   }
   txBuilder.set_collateral(collateralTxInputsBuilder)
 
@@ -1061,17 +1048,13 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
   const datum = plutusInfo.datum
 
   const redeemerPayload = document.querySelector('#sign-redeem-from-script-payload').value;
-
-  let redeemerData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str("42"))
-
-  if (redeemerPayload !== "" && !isNaN(redeemerPayload)) {
-    redeemerData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemerPayload))
-  }
+  let redeemerValue = redeemerPayload !== "" && !isNaN(redeemerPayload) ? redeemerPayload : "42"
+  let redeemerData = CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemerValue));
 
   const redeemer = CardanoWasm.Redeemer.new(
     CardanoWasm.RedeemerTag.new_spend(),
     CardanoWasm.BigNum.zero(),
-    CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemerPayload)),
+    redeemerData,
     CardanoWasm.ExUnits.new(
       CardanoWasm.BigNum.from_str('8000'),
       CardanoWasm.BigNum.from_str('9764680'),
@@ -1084,9 +1067,12 @@ signSpendDatumEqualsRedeemerTx.addEventListener('click', async () => {
 
   txBuilder.add_plutus_script_input(plutusScriptWitness, tx, value)
 
-  const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress)
+  // calculate the min fee required and send any change to the change
+  const hexChangeAddress = await cardanoApi.getChangeAddress()
+  const shelleyChangeAddress = CardanoWasm.Address.from_bytes(hexToBytes(hexChangeAddress));
+  txBuilder.add_change_if_needed(shelleyChangeAddress);
 
-  txBuilder.add_change_if_needed(shelleyChangeAddress)
+  // this will automatically calculate the hashes of the script, which needs to be included in all plutus txs
   txBuilder.calc_script_data_hash(CardanoWasm.TxBuilderConstants.plutus_default_cost_models())
 
   const unsignedTransactionHex = bytesToHex(txBuilder.build_tx().to_bytes())
