@@ -463,7 +463,7 @@ submitTx.addEventListener("click", () => {
 
 const AMOUNT_TO_SEND = "1000000";
 const SEND_TO_ADDRESS =
-  "addr_test1qz8xh9w6f2vdnp89xzqlxnusldhz6kdm4rp970gl8swwjjkr3y3kdut55a40jff00qmg74686vz44v6k363md06qkq0q4lztj0";
+  "addr_test1qqxfqw9mpx37345n4agqe68s0g2jthg54fxr8huzj0gu30gx6625c3k4ald5qzspkxcnrq7jq0mffn0rxkdagalj2yyqftvg3d";
 
 signTx.addEventListener("click", async () => {
   toggleSpinner("show");
@@ -474,40 +474,19 @@ signTx.addEventListener("click", async () => {
   }
 
   if (!unsignedTransactionHex) {
-    if (!utxos) {
-      alertError("Should request utxos first");
-      return;
-    }
-
-    if (!changeAddress) {
-      alertError('Should request change address first')
-      return;
-    }
-
     const txBuilder = getTxBuilder()
 
-    let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
-
-    let inputUTXOs = mapCborUtxos(inputUTXOCBOR)
-
-    for (let i = 0; i < inputUTXOs.length; i++) {
-      const utxo = inputUTXOs[i]
-      const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
-      const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
-      const keyHash = baseAddr.payment_cred().to_keyhash();
-
-      const { tx, value } = utxoJSONToTransactionInput(utxo)
-
-      txBuilder.add_key_input(
-        keyHash,
-        tx,
-        value
-      )
+    // get utxos selected for 2 ADA
+    let hexInputUtxos = await cardanoApi.getUtxos("2000000")
+    const txInputsBuilder = CardanoWasm.TxInputsBuilder.new()
+    for (let i = 0; i < hexInputUtxos.length; i++) {
+      const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
+      txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
     }
+    txBuilder.set_inputs(txInputsBuilder)
 
     const shelleyOutputAddress =
       CardanoWasm.Address.from_bech32(SEND_TO_ADDRESS);
-    const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress);
 
     // add output to the tx
     txBuilder.add_output(
@@ -521,6 +500,8 @@ signTx.addEventListener("click", async () => {
     txBuilder.set_ttl(ttl);
 
     // calculate the min fee required and send any change to an address
+    const hexChangeAddress = await cardanoApi.getChangeAddress()
+    const shelleyChangeAddress = CardanoWasm.Address.from_bytes(hexToBytes(hexChangeAddress));
     txBuilder.add_change_if_needed(shelleyChangeAddress);
 
     unsignedTransactionHex = bytesToHex(txBuilder.build_tx().to_bytes());
@@ -994,7 +975,7 @@ signSendToDatumEqualsRedeemerTx.addEventListener('click', async () => {
   const ttl = getTtl();
   txBuilder.set_ttl(ttl);
 
-  // calculate the min fee required and send any change to an address
+  // calculate the min fee required and send any change to the change
   const hexChangeAddress = await cardanoApi.getChangeAddress()
   const shelleyChangeAddress = CardanoWasm.Address.from_bytes(hexToBytes(hexChangeAddress));
   txBuilder.add_change_if_needed(shelleyChangeAddress);
