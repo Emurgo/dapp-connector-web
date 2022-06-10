@@ -56,13 +56,13 @@ let unsignedTransactionHex;
 let transactionHex;
 
 let plutusInfo = {
-  "utxo_id": "33675af32fcfd9e920c3f07cad94d977dbdb6b3c4ee17f37f9247d74e9c474b90",
-  "tx_hash": "33675af32fcfd9e920c3f07cad94d977dbdb6b3c4ee17f37f9247d74e9c474b9",
+  "utxo_id": "",
+  "tx_hash": "",
   "tx_index": "0",
   "receiver": "addr_test1wpl95paxq4ym8324kgxlnseefr9rpz85962z9jhr2g08yksxa9tge",
-  "amount": "2000000",
+  "amount": "",
   "assets": [],
-  "datum": CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str("10"))
+  "datum": null
 }
 
 function isCBOR() {
