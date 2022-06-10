@@ -800,39 +800,26 @@ mintNFT.addEventListener('click', async () => {
     return;
   }
 
-  if (!changeAddress) {
-    alertError('Should request change address first')
-    return;
-  }
-
   const txBuilder = getTxBuilder()
+  const hexInputUtxos = await cardanoApi.getUtxos("2000000")
 
-  let inputUTXOCBOR = await cardanoApi.getUtxos(bytesToHex(CardanoWasm.Value.new(CardanoWasm.BigNum.from_str("2000000")).to_bytes()))
+  // the key hash will be needed for our policy id
+  let wasmKeyHash
 
-  let inputUTXOs = mapCborUtxos(inputUTXOCBOR)
-
-  let keyHash = ""
-
-  for (let i = 0; i < inputUTXOs.length; i++) {
-    const utxo = inputUTXOs[i]
-    const addr = CardanoWasm.Address.from_bech32(utxo.receiver)
-    const baseAddr = CardanoWasm.BaseAddress.from_address(addr);
-    keyHash = baseAddr.payment_cred().to_keyhash();
-
-    const { tx, value } = utxoJSONToTransactionInput(utxo)
-
-    txBuilder.add_key_input(
-      keyHash,
-      tx,
-      value
-    )
+  // add utxos for amount
+  const txInputsBuilder = CardanoWasm.TxInputsBuilder.new()
+  for (let i = 0; i < hexInputUtxos.length; i++) {
+      const wasmUtxo = CardanoWasm.TransactionUnspentOutput.from_bytes(hexToBytes(hexInputUtxos[i]))
+      txInputsBuilder.add_input(wasmUtxo.output().address(), wasmUtxo.input(), wasmUtxo.output().amount())
+      if (i == 0) {
+          wasmKeyHash = CardanoWasm.BaseAddress.from_address(wasmUtxo.output().address()).payment_cred().to_keyhash()
+      }
   }
-
-  const shelleyChangeAddress = CardanoWasm.Address.from_bech32(changeAddress);
+  txBuilder.set_inputs(txInputsBuilder)
 
   // Add the keyhash script to ensure the NFT can only be minted by the corresponding wallet
   const keyHashScript = CardanoWasm.NativeScript.new_script_pubkey(
-    CardanoWasm.ScriptPubkey.new(keyHash)
+    CardanoWasm.ScriptPubkey.new(wasmKeyHash)
   );
   const ttl = getTtl();
 
@@ -860,8 +847,10 @@ mintNFT.addEventListener('click', async () => {
     },
   };
 
+  const changeAddress = await cardanoApi.getChangeAddress()
+  const wasmChangeAddress = CardanoWasm.Address.from_bytes(hexToBytes(changeAddress))
   let outputBuilder = CardanoWasm.TransactionOutputBuilder.new();
-  outputBuilder = outputBuilder.with_address(shelleyChangeAddress);
+  outputBuilder = outputBuilder.with_address(wasmChangeAddress);
 
   txBuilder.add_mint_asset_and_output_min_required_coin(
     policyScript,
@@ -871,7 +860,7 @@ mintNFT.addEventListener('click', async () => {
 
   txBuilder.set_ttl(ttl)
   txBuilder.add_json_metadatum(CardanoWasm.BigNum.from_str('721'), JSON.stringify(metadataObj))
-  txBuilder.add_change_if_needed(shelleyChangeAddress)
+  txBuilder.add_change_if_needed(wasmChangeAddress)
 
   const unsignedTransactionHex = bytesToHex(txBuilder.build_tx().to_bytes())
 
