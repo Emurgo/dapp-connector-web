@@ -1109,8 +1109,8 @@ function getTxBuilder() {
       .pool_deposit(CardanoWasm.BigNum.from_str('500000000'))
       .key_deposit(CardanoWasm.BigNum.from_str('2000000'))
       .ex_unit_prices(CardanoWasm.ExUnitPrices.new(
-        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("721"), CardanoWasm.BigNum.from_str("10000000")),
-        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("577"), CardanoWasm.BigNum.from_str("10000"))
+        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("577"), CardanoWasm.BigNum.from_str("10000")),
+        CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str("721"), CardanoWasm.BigNum.from_str("10000000"))
       ))
       .max_value_size(5000)
       .max_tx_size(16384)
